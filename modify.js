@@ -234,6 +234,12 @@ async function handleRequest(request) {
 				container.innerHTML = '';
 				
 				const ul = document.createElement('ul');
+
+				if (!navigator.onLine) {
+					alert("网络连接已断开，无法测速");
+					return;
+				}
+			
 				
 				testSites.forEach((site, index) => {
 					const li = document.createElement('li');
@@ -272,21 +278,26 @@ async function handleRequest(request) {
 			}
 
 			function testLatency(url, resultElem, barElem, index, labelElem) {
-				const testImg = new Image();
 				const start = performance.now();
 				let finished = false;
-
-				testImg.onload = testImg.onerror = function () {
-					if (finished) return;
-					finished = true;
-					const duration = Math.round(performance.now() - start);
-					results[index] = duration;
-					updateUI(duration, resultElem, barElem);
-					checkAllFinished();
-				};
-
-				testImg.src = url + '/favicon.ico?_nocache=' + Date.now() + Math.random();
-
+			
+				fetch(url + '/favicon.ico?_nocache=' + Date.now() + Math.random(), { method: 'HEAD', mode: 'no-cors' })
+					.then(() => {
+						if (finished) return;
+						finished = true;
+						const duration = Math.round(performance.now() - start);
+						results[index] = duration;
+						updateUI(duration, resultElem, barElem);
+						checkAllFinished();
+					})
+					.catch(() => {
+						if (finished) return;
+						finished = true;
+						results[index] = null;
+						updateUI('timeout', resultElem, barElem);
+						checkAllFinished();
+					});
+			
 				setTimeout(() => {
 					if (!finished) {
 						finished = true;
